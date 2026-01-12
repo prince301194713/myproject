@@ -14,46 +14,32 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    env:
-      DB_IMAGE: ${{ vars.DB_IMAGE }}
-      NODE_IMAGE: ${{ vars.NODE_IMAGE }}
-
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
-
+      
       - name: Load kubeconfig
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         run: |
           mkdir -p ~/.kube
-          echo "$KUBE_CONFIG_DATA" | sed 's/\\n/\n/g' > ~/.kube/config
+          echo "$KUBE_CONFIG_DATA" | sed 's/\\n/\n/g' > ~/.kube/config 
           chmod 600 ~/.kube/config
-
-      - name: Verify Cluster
-        run: kubectl get nodes
-
-      # 🔥 THIS IS THE IMPORTANT PART
-      - name: Replace images & Deploy
+          ls -la ~/.kube
+      - name: Verify the Cluster Access
         run: |
-          kubectl apply -f k8s/01-namespace.yaml
-          kubectl apply -f k8s/02-mysql-pv.yaml
-          kubectl apply -f k8s/04-mysql-service.yaml
-          kubectl apply -f k8s/06-nodejs-service.yaml
-          echo "DB_IMAGE=$DB_IMAGE"
-          echo "NODE_IMAGE=$NODE_IMAGE"
-          envsubst < k8s/03-mysql-statefulset.yaml > /tmp/mysql.yaml
-          envsubst < k8s/05-nodejs-blue-deployment.yaml > /tmp/node-blue.yaml
-          envsubst < k8s/07-nodejs-green-deployment.yml > /tmp/node-green.yaml
-          kubectl apply -f /tmp/mysql.yaml
-          kubectl apply -f /tmp/node-blue.yaml
-          kubectl apply -f /tmp/node-green.yaml
-      - name: Wait for pods
-        run: kubectl wait --for=condition=ready pod --all -n webapp --timeout=60s
-
-      - name: Check pods
-        run: kubectl get pods -n webapp
-
-      - name: Check services
-        run: kubectl get svc -n webapp
+          kubectl get nodes
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/
+      
+      - name: wait for pods to be ready
+        run: |
+          kubectl wait --for=condition=ready pod --all -n webapp --timeout=60s
+      - name: check pods 
+        run: | 
+          kubectl get pods -n webapp
+      - name: check services
+        run: |
+          kubectl get svc -n webapp
