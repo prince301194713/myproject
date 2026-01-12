@@ -1,0 +1,45 @@
+name: Deploy to AKS (CD)
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+    secrets:
+      KUBE_CONFIG_DATA:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      
+      - name: Load kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG_DATA" | sed 's/\\n/\n/g' > ~/.kube/config 
+          chmod 600 ~/.kube/config
+          ls -la ~/.kube
+      - name: Verify the Cluster Access
+        run: |
+          kubectl get nodes
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/
+      
+      - name: wait for pods to be ready
+        run: |
+          kubectl wait --for=condition=ready pod --all -n webapp --timeout=60s
+      - name: check pods 
+        run: | 
+          kubectl get pods -n webapp
+      - name: check services
+        run: |
+          kubectl get svc -n webapp
