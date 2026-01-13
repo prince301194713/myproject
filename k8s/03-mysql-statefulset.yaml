@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: mysql
-          image: project9988.azurecr.io/mysql:latest
+          image: registry301194.azurecr.io/mysql:latest
           imagePullPolicy: Always
           env:
             - name: MYSQL_ROOT_PASSWORD
